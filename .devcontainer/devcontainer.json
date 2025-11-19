@@ -1,0 +1,29 @@
+{
+  "name": "data-ecosystem-gb-santander (Python 3.10)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "python.pythonPath": "/usr/local/bin/python"
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-toolsai.jupyter",
+        "ms-azuretools.vscode-docker",
+        "ms-python.vscode-pylance",
+        "njpwerner.autodocstring"
+      ]
+    }
+  },
+  "remoteUser": "dev",
+  "workspaceFolder": "/workspaces/data-ecosystem-gb-santander",
+  "postCreateCommand": "pip install -e .[dev,ml,viz]",
+  "runArgs": ["--network=host", "--env-file", ".devcontainer/.env"],
+  "mounts": [
+    "source=${env:HOME}/.aws,target=/home/dev/.aws,type=bind"
+  ]
+}
