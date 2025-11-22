@@ -1,0 +1,62 @@
+# Archivos de ambiente
+.env
+.env.local
+.env.development
+.env.staging
+.env.production
+.env.test
+.env*.local
+*.env
+
+# Archivos de configuración sensibles
+config.json
+config.local.json
+secrets.json
+credentials.json
+*.pem
+*.key
+*.crt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+ENV/
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# IDE y editores
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+*.log
+
+# Directorios de build
+dist/
+build/
+target/
+*.egg-info/
+
+# Archivos temporales
+tmp/
+temp/
+*.tmp
+*.temp

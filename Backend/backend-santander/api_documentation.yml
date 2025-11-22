@@ -1,0 +1,1226 @@
+# ============================================================================
+# ATLAS AL CRIMEN - SANTANDER API
+# Documentación Detallada de Endpoints
+# ============================================================================
+# Base URL: http://localhost:8000/api/v1
+# Documentación interactiva: http://localhost:8000/docs
+# ============================================================================
+
+api:
+  title: "Atlas al Crimen - Santander API"
+  version: "1.0.0"
+  base_url: "/api/v1"
+  description: "API para visualización de datos de seguridad y correlación climática del departamento de Santander, Colombia"
+
+# ============================================================================
+# SECCIÓN 1: GEOGRAFÍA - Mapas coropléticos
+# ============================================================================
+geografia:
+  prefix: "/geografia"
+  descripcion: "Endpoints para mapas coropléticos y datos geoespaciales de municipios"
+  
+  endpoints:
+    - path: "/delitos-por-municipio"
+      method: "GET"
+      descripcion: "Obtiene el total de delitos por municipio con geometría GeoJSON para visualización en mapa coroplético"
+      uso_frontend: "Mapa coroplético coloreado por cantidad total de delitos"
+      params:
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+          descripcion: "Filtrar por año específico (ej: 2024)"
+          ejemplo: 2024
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+          descripcion: "Filtrar por tipo de delito"
+          valores_permitidos: ["HURTO", "VIF", "SEXUAL", "LESIONES", "INFANCIA"]
+          ejemplo: "HURTO"
+      response:
+        tipo: "GeoJSON FeatureCollection"
+        estructura:
+          type: "FeatureCollection"
+          features:
+            - type: "Feature"
+              properties:
+                codigo_dane: 68001
+                nombre_municipio: "BUCARAMANGA"
+                categoria_rural_urbana: "PREDOMINANTEMENTE URBANO"
+                total_delitos: 109492
+              geometry:
+                type: "Polygon"
+                coordinates: "[[[-73.07, 7.19], ...]]"
+
+    - path: "/tasa-por-municipio"
+      method: "GET"
+      descripcion: "Obtiene la tasa de delitos por 100.000 habitantes por municipio. Fórmula: (delitos / población) * 100.000"
+      uso_frontend: "Mapa coroplético normalizado por población"
+      params:
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+          descripcion: "Año para filtrar delitos y obtener población correspondiente"
+          ejemplo: 2024
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+          descripcion: "Filtrar por tipo de delito"
+          valores_permitidos: ["HURTO", "VIF", "SEXUAL", "LESIONES", "INFANCIA"]
+      response:
+        tipo: "GeoJSON FeatureCollection"
+        estructura:
+          properties:
+            codigo_dane: 68001
+            nombre_municipio: "BUCARAMANGA"
+            total_delitos: 10000
+            poblacion_total: 528575
+            tasa_por_100k: 1891.45
+
+    - path: "/municipios"
+      method: "GET"
+      descripcion: "Lista todos los municipios disponibles sin geometría (para selectores)"
+      uso_frontend: "Poblar dropdown de selección de municipios"
+      params: []
+      response:
+        tipo: "array"
+        ejemplo:
+          - codigo_dane: 68001
+            nombre_municipio: "BUCARAMANGA"
+            categoria_rural_urbana: "PREDOMINANTEMENTE URBANO"
+
+    - path: "/categorias-delito"
+      method: "GET"
+      descripcion: "Lista todas las categorías de delito disponibles"
+      uso_frontend: "Poblar dropdown de categorías de delito"
+      params: []
+      response:
+        tipo: "array"
+        ejemplo: ["HURTO", "INFANCIA", "LESIONES", "SEXUAL", "VIF"]
+
+# ============================================================================
+# SECCIÓN 2: TEMPORAL - Series de tiempo
+# ============================================================================
+temporal:
+  prefix: "/temporal"
+  descripcion: "Endpoints para análisis temporal de delitos (series de tiempo)"
+  
+  endpoints:
+    - path: "/linea-mensual"
+      method: "GET"
+      descripcion: "Serie temporal mensual de delitos. Ideal para gráficos de línea"
+      uso_frontend: "Gráfico de línea mostrando evolución mensual"
+      params:
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+          descripcion: "Filtrar por tipo de delito"
+          ejemplo: "HURTO"
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+          descripcion: "Filtrar por año específico"
+          ejemplo: 2024
+        - nombre: "codigo_dane"
+          tipo: "integer"
+          requerido: false
+          descripcion: "Filtrar por código DANE del municipio"
+          ejemplo: 68001
+      response:
+        tipo: "array"
+        ejemplo:
+          - anio: 2024
+            mes: 1
+            periodo: "2024-01"
+            total: 2439
+
+    - path: "/linea-anual"
+      method: "GET"
+      descripcion: "Serie temporal anual de delitos agregados por año"
+      uso_frontend: "Gráfico de línea/barras con tendencia histórica"
+      params:
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+          descripcion: "Filtrar por tipo de delito"
+        - nombre: "codigo_dane"
+          tipo: "integer"
+          requerido: false
+          descripcion: "Filtrar por municipio"
+      response:
+        tipo: "array"
+        ejemplo:
+          - anio: 2024
+            total: 28546
+
+    - path: "/por-dia-semana"
+      method: "GET"
+      descripcion: "Distribución de delitos por día de la semana. Calculado desde fecha_hecho"
+      uso_frontend: "Gráfico de barras por día de semana"
+      params:
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+        - nombre: "codigo_dane"
+          tipo: "integer"
+          requerido: false
+      response:
+        tipo: "array"
+        ejemplo:
+          - dia: "LUNES"
+            dia_num: 1
+            total: 15234
+          - dia: "MARTES"
+            dia_num: 2
+            total: 14567
+
+    - path: "/tendencia-semanal"
+      method: "GET"
+      descripcion: "Serie temporal semanal de delitos"
+      uso_frontend: "Gráfico de línea con resolución semanal"
+      params:
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+        - nombre: "codigo_dane"
+          tipo: "integer"
+          requerido: false
+      response:
+        tipo: "array"
+        ejemplo:
+          - anio: 2024
+            semana: 1
+            periodo: "2024-W01"
+            total: 685
+
+    - path: "/comparativa-anual"
+      method: "GET"
+      descripcion: "Compara evolución mensual entre años. Útil para ver estacionalidad"
+      uso_frontend: "Gráfico de líneas múltiples (una por año)"
+      params:
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+        - nombre: "codigo_dane"
+          tipo: "integer"
+          requerido: false
+      response:
+        tipo: "object"
+        ejemplo:
+          anios: [2022, 2023, 2024]
+          datos:
+            2024:
+              1: 2500
+              2: 2300
+              3: 2400
+
+    - path: "/por-modalidad"
+      method: "GET"
+      descripcion: "Distribución de delitos por modalidad específica"
+      uso_frontend: "Gráfico de barras horizontales o pie chart"
+      params:
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+        - nombre: "codigo_dane"
+          tipo: "integer"
+          requerido: false
+      response:
+        tipo: "array"
+        ejemplo:
+          - modalidad: "HURTO PERSONAS"
+            total: 45000
+            porcentaje: 35.5
+
+    - path: "/por-zona"
+      method: "GET"
+      descripcion: "Distribución de delitos por zona (URBANA/RURAL)"
+      uso_frontend: "Gráfico de pie o donut"
+      params:
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+        - nombre: "codigo_dane"
+          tipo: "integer"
+          requerido: false
+      response:
+        tipo: "array"
+        ejemplo:
+          - zona: "URBANA"
+            total: 85000
+            porcentaje: 92.3
+          - zona: "RURAL"
+            total: 7100
+            porcentaje: 7.7
+
+    - path: "/anios-disponibles"
+      method: "GET"
+      descripcion: "Lista todos los años disponibles en los datos"
+      uso_frontend: "Poblar selector de años"
+      params: []
+      response:
+        tipo: "array"
+        ejemplo: [2003, 2004, 2005, "...", 2024, 2025]
+
+# ============================================================================
+# SECCIÓN 3: VÍCTIMAS - Análisis demográfico
+# ============================================================================
+victimas:
+  prefix: "/victimas"
+  descripcion: "Endpoints para análisis demográfico de víctimas (género, edad, ubicación)"
+  
+  endpoints:
+    - path: "/por-genero"
+      method: "GET"
+      descripcion: "Distribución de víctimas por género"
+      uso_frontend: "Gráfico de barras o pie chart"
+      params:
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+          descripcion: "Tipo de delito"
+          valores_permitidos: ["HURTO", "VIF", "SEXUAL", "LESIONES", "INFANCIA"]
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+          descripcion: "Año específico"
+        - nombre: "fecha_inicio"
+          tipo: "date"
+          formato: "YYYY-MM-DD"
+          requerido: false
+          descripcion: "Fecha de inicio del rango"
+          ejemplo: "2024-01-01"
+        - nombre: "fecha_fin"
+          tipo: "date"
+          formato: "YYYY-MM-DD"
+          requerido: false
+          descripcion: "Fecha fin del rango"
+          ejemplo: "2024-12-31"
+        - nombre: "municipio"
+          tipo: "string"
+          requerido: false
+          descripcion: "Nombre del municipio (se resuelve automáticamente a código DANE)"
+          ejemplo: "BUCARAMANGA"
+      response:
+        tipo: "array"
+        ejemplo:
+          - genero: "FEMENINO"
+            total: 37052
+            porcentaje: 21.69
+          - genero: "MASCULINO"
+            total: 25065
+            porcentaje: 14.67
+
+    - path: "/por-grupo-etario"
+      method: "GET"
+      descripcion: "Distribución de víctimas por grupo etario"
+      uso_frontend: "Gráfico de barras por grupo de edad"
+      params:
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+        - nombre: "fecha_inicio"
+          tipo: "date"
+          requerido: false
+        - nombre: "fecha_fin"
+          tipo: "date"
+          requerido: false
+        - nombre: "municipio"
+          tipo: "string"
+          requerido: false
+      response:
+        tipo: "array"
+        ejemplo:
+          - grupo_etario: "MENORES"
+            total: 5000
+            porcentaje: 8.5
+          - grupo_etario: "ADOLESCENTES"
+            total: 12000
+            porcentaje: 20.4
+
+    - path: "/mapa-puntos"
+      method: "GET"
+      descripcion: "Puntos georreferenciados de víctimas para visualización en mapa"
+      uso_frontend: "Mapa de puntos (scatter map) con ubicación de eventos"
+      params:
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+        - nombre: "fecha_inicio"
+          tipo: "date"
+          requerido: false
+        - nombre: "fecha_fin"
+          tipo: "date"
+          requerido: false
+        - nombre: "municipio"
+          tipo: "string"
+          requerido: false
+        - nombre: "genero"
+          tipo: "string"
+          requerido: false
+          valores_permitidos: ["MASCULINO", "FEMENINO", "NO REPORTADO"]
+        - nombre: "grupo_etario"
+          tipo: "string"
+          requerido: false
+          valores_permitidos: ["MENORES", "ADOLESCENTES", "ADULTOS", "NO REPORTADO"]
+        - nombre: "limit"
+          tipo: "integer"
+          requerido: false
+          default: 5000
+          descripcion: "Límite de puntos a retornar (para rendimiento)"
+      response:
+        tipo: "GeoJSON FeatureCollection"
+        estructura:
+          type: "FeatureCollection"
+          total_puntos: 5000
+          features:
+            - type: "Feature"
+              properties:
+                id_evento: 123456
+                fecha_hecho: "2024-03-15"
+                categoria_delito: "HURTO"
+                genero: "MASCULINO"
+                grupo_etario: "ADULTOS"
+                arma_medio: "SIN ARMA"
+              geometry:
+                type: "Point"
+                coordinates: [-73.12, 7.13]
+
+    - path: "/por-arma-medio"
+      method: "GET"
+      descripcion: "Distribución de eventos por arma/medio utilizado"
+      uso_frontend: "Gráfico de barras horizontales"
+      params:
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+        - nombre: "fecha_inicio"
+          tipo: "date"
+          requerido: false
+        - nombre: "fecha_fin"
+          tipo: "date"
+          requerido: false
+        - nombre: "municipio"
+          tipo: "string"
+          requerido: false
+      response:
+        tipo: "array"
+        ejemplo:
+          - arma_medio: "SIN ARMA"
+            total: 45000
+            porcentaje: 55.2
+          - arma_medio: "ARMA BLANCA"
+            total: 12000
+            porcentaje: 14.7
+
+    - path: "/por-clase-sitio"
+      method: "GET"
+      descripcion: "Distribución de eventos por clase de sitio donde ocurrió"
+      uso_frontend: "Gráfico de barras o treemap"
+      params:
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+        - nombre: "fecha_inicio"
+          tipo: "date"
+          requerido: false
+        - nombre: "fecha_fin"
+          tipo: "date"
+          requerido: false
+        - nombre: "municipio"
+          tipo: "string"
+          requerido: false
+      response:
+        tipo: "array"
+        ejemplo:
+          - clase_sitio: "VIA PUBLICA"
+            total: 35000
+            porcentaje: 42.8
+          - clase_sitio: "VIVIENDA"
+            total: 18000
+            porcentaje: 22.0
+
+    - path: "/genero-por-delito"
+      method: "GET"
+      descripcion: "Distribución de género por cada tipo de delito. Útil para gráficos de barras agrupadas"
+      uso_frontend: "Gráfico de barras agrupadas (stacked/grouped)"
+      params:
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+        - nombre: "fecha_inicio"
+          tipo: "date"
+          requerido: false
+        - nombre: "fecha_fin"
+          tipo: "date"
+          requerido: false
+        - nombre: "municipio"
+          tipo: "string"
+          requerido: false
+      response:
+        tipo: "array"
+        ejemplo:
+          - categoria_delito: "VIF"
+            generos:
+              FEMENINO: 15000
+              MASCULINO: 3000
+            total: 18000
+
+    - path: "/grupo-etario-por-delito"
+      method: "GET"
+      descripcion: "Distribución de grupo etario por cada tipo de delito"
+      uso_frontend: "Gráfico de barras agrupadas por edad"
+      params:
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+        - nombre: "fecha_inicio"
+          tipo: "date"
+          requerido: false
+        - nombre: "fecha_fin"
+          tipo: "date"
+          requerido: false
+        - nombre: "municipio"
+          tipo: "string"
+          requerido: false
+      response:
+        tipo: "array"
+        ejemplo:
+          - categoria_delito: "INFANCIA"
+            grupos_etarios:
+              MENORES: 5000
+              ADOLESCENTES: 2000
+            total: 7000
+
+# ============================================================================
+# SECCIÓN 4: CLIMA - Correlación climática
+# ============================================================================
+clima:
+  prefix: "/clima"
+  descripcion: "Endpoints para análisis de correlación entre precipitación y delitos"
+  nota: "Los datos de clima son históricos (2005-2019). Para correlación efectiva usar años dentro de ese rango"
+  
+  endpoints:
+    - path: "/scatter-lluvia-delitos"
+      method: "GET"
+      descripcion: "Datos para scatter plot: precipitación diaria vs cantidad de delitos"
+      uso_frontend: "Gráfico de dispersión (scatter plot)"
+      params:
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+          default: "HURTO"
+          descripcion: "Tipo de delito a correlacionar"
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+          descripcion: "Año para filtrar"
+        - nombre: "codigo_dane"
+          tipo: "integer"
+          requerido: false
+          descripcion: "Filtrar por municipio"
+      response:
+        tipo: "array"
+        ejemplo:
+          - fecha: "2019-01-15"
+            precipitacion_mm: 12.5
+            total_delitos: 45
+
+    - path: "/barras-categorias-lluvia"
+      method: "GET"
+      descripcion: "Agrupa delitos por categorías de precipitación"
+      uso_frontend: "Gráfico de barras comparativo"
+      params:
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+          default: "HURTO"
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+        - nombre: "codigo_dane"
+          tipo: "integer"
+          requerido: false
+      response:
+        tipo: "array"
+        categorias_lluvia:
+          - "Sin lluvia (0 mm)"
+          - "Lluvia ligera (0.1-5 mm)"
+          - "Lluvia moderada (5-20 mm)"
+          - "Lluvia fuerte (>20 mm)"
+        ejemplo:
+          - categoria_lluvia: "Sin lluvia"
+            dias: 150
+            total_delitos: 4500
+            promedio_delitos_dia: 30.0
+          - categoria_lluvia: "Lluvia fuerte"
+            dias: 25
+            total_delitos: 600
+            promedio_delitos_dia: 24.0
+
+    - path: "/linea-tiempo-superpuesta"
+      method: "GET"
+      descripcion: "Serie temporal de lluvia y delitos para visualización superpuesta"
+      uso_frontend: "Gráfico de líneas con doble eje Y"
+      params:
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+          default: "HURTO"
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+        - nombre: "codigo_dane"
+          tipo: "integer"
+          requerido: false
+        - nombre: "agrupacion"
+          tipo: "string"
+          requerido: false
+          default: "mensual"
+          valores_permitidos: ["diaria", "semanal", "mensual"]
+      response:
+        tipo: "object"
+        ejemplo:
+          agrupacion: "mensual"
+          categoria_delito: "HURTO"
+          data:
+            - periodo: "2019-01-01"
+              precipitacion_promedio: 45.2
+              precipitacion_total: 135.6
+              total_delitos: 850
+
+    - path: "/correlacion"
+      method: "GET"
+      descripcion: "Calcula estadísticas de correlación de Pearson entre lluvia y delitos"
+      uso_frontend: "Mostrar indicador de correlación y su interpretación"
+      params:
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+          default: "HURTO"
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+        - nombre: "codigo_dane"
+          tipo: "integer"
+          requerido: false
+      response:
+        tipo: "object"
+        ejemplo:
+          categoria_delito: "HURTO"
+          n_observaciones: 365
+          precipitacion_promedio: 4.25
+          delitos_promedio: 32.5
+          correlacion_pearson: -0.1234
+          interpretacion: "Correlación débil negativa"
+
+    - path: "/resumen-precipitacion"
+      method: "GET"
+      descripcion: "Estadísticas resumidas de precipitación"
+      uso_frontend: "Cards con métricas clave de clima"
+      params:
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+        - nombre: "codigo_dane"
+          tipo: "integer"
+          requerido: false
+      response:
+        tipo: "object"
+        ejemplo:
+          dias_con_registro: 365
+          dias_secos: 180
+          dias_con_lluvia: 185
+          precipitacion_promedio_mm: 4.25
+          precipitacion_maxima_mm: 85.3
+          precipitacion_total_mm: 1551.25
+
+# ============================================================================
+# SECCIÓN 5: FILTROS - Opciones para selectores
+# ============================================================================
+filtros:
+  prefix: "/filtros"
+  descripcion: "Endpoints para poblar dropdowns y selectores del frontend"
+  
+  endpoints:
+    - path: "/municipios"
+      method: "GET"
+      descripcion: "Lista todos los municipios de Santander con código DANE y categoría"
+      uso_frontend: "Dropdown de municipios"
+      params: []
+      response:
+        tipo: "array"
+        ejemplo:
+          - codigo_dane: 68001
+            nombre: "BUCARAMANGA"
+            categoria: "PREDOMINANTEMENTE URBANO"
+
+    - path: "/categorias-delito"
+      method: "GET"
+      descripcion: "Lista todas las categorías de delito disponibles"
+      uso_frontend: "Dropdown de tipos de delito"
+      params: []
+      response:
+        tipo: "array"
+        ejemplo: ["HURTO", "INFANCIA", "LESIONES", "SEXUAL", "VIF"]
+
+    - path: "/generos"
+      method: "GET"
+      descripcion: "Lista todos los géneros disponibles"
+      uso_frontend: "Dropdown/checkbox de filtro de género"
+      params: []
+      response:
+        tipo: "array"
+        ejemplo: ["FEMENINO", "MASCULINO", "NO REPORTADO"]
+
+    - path: "/grupos-etarios"
+      method: "GET"
+      descripcion: "Lista todos los grupos etarios disponibles"
+      uso_frontend: "Dropdown de filtro de edad"
+      params: []
+      response:
+        tipo: "array"
+        ejemplo: ["ADOLESCENTES", "ADULTOS", "MENORES", "NO REPORTADO"]
+
+    - path: "/zonas"
+      method: "GET"
+      descripcion: "Lista todas las zonas disponibles"
+      uso_frontend: "Dropdown de filtro urbano/rural"
+      params: []
+      response:
+        tipo: "array"
+        ejemplo: ["NO ESPECIFICADO (DATO AGREGADO)", "RURAL", "URBANA"]
+
+    - path: "/armas-medios"
+      method: "GET"
+      descripcion: "Lista todas las armas/medios disponibles"
+      uso_frontend: "Dropdown de filtro de arma"
+      params: []
+      response:
+        tipo: "array"
+        ejemplo: ["ARMA BLANCA", "ARMA DE FUEGO", "CONTUNDENTES", "SIN ARMA", "..."]
+
+    - path: "/modalidades"
+      method: "GET"
+      descripcion: "Lista todas las modalidades específicas de delito"
+      uso_frontend: "Dropdown de modalidades (largo)"
+      params: []
+      response:
+        tipo: "array"
+        ejemplo: ["HURTO PERSONAS", "HURTO RESIDENCIAS", "VIOLENCIA INTRAFAMILIAR", "..."]
+
+    - path: "/anios"
+      method: "GET"
+      descripcion: "Lista todos los años disponibles en orden descendente"
+      uso_frontend: "Dropdown de selector de año"
+      params: []
+      response:
+        tipo: "array"
+        ejemplo: [2025, 2024, 2023, 2022, "...", 2003]
+
+    - path: "/rango-fechas"
+      method: "GET"
+      descripcion: "Retorna fecha mínima y máxima disponible en los datos"
+      uso_frontend: "Configurar límites de date picker"
+      params: []
+      response:
+        tipo: "object"
+        ejemplo:
+          fecha_minima: "2003-01-01"
+          fecha_maxima: "2025-10-31"
+
+    - path: "/resumen"
+      method: "GET"
+      descripcion: "Retorna TODAS las opciones disponibles en un solo request. Ideal para inicializar frontend"
+      uso_frontend: "Cargar todos los selectores con una sola llamada"
+      params: []
+      response:
+        tipo: "object"
+        ejemplo:
+          municipios: ["AGUADA", "ALBANIA", "...", "ZAPATOCA"]
+          categorias_delito: ["HURTO", "INFANCIA", "LESIONES", "SEXUAL", "VIF"]
+          generos: ["FEMENINO", "MASCULINO", "NO REPORTADO"]
+          grupos_etarios: ["ADOLESCENTES", "ADULTOS", "MENORES", "NO REPORTADO"]
+          anios: [2025, 2024, 2023, "...", 2003]
+          rango_fechas:
+            minima: "2003-01-01"
+            maxima: "2025-10-31"
+
+# ============================================================================
+# ENDPOINTS UTILITARIOS
+# ============================================================================
+utilidades:
+  endpoints:
+    - path: "/"
+      method: "GET"
+      descripcion: "Endpoint raíz con información de la API"
+      response:
+        nombre: "Atlas al Crimen - Santander API"
+        version: "1.0.0"
+        documentacion: "/docs"
+        endpoints:
+          geografia: "/api/v1/geografia"
+          temporal: "/api/v1/temporal"
+          victimas: "/api/v1/victimas"
+          clima: "/api/v1/clima"
+          filtros: "/api/v1/filtros"
+
+    - path: "/health"
+      method: "GET"
+      descripcion: "Health check para monitoreo"
+      response:
+        status: "healthy"
+
+# ============================================================================
+# NOTAS PARA DESARROLLADORES FRONTEND
+# ============================================================================
+notas_desarrollo:
+  parametro_municipio:
+    descripcion: "En la sección de Víctimas, puedes usar el nombre del municipio directamente"
+    ejemplo: "?municipio=BUCARAMANGA en lugar de ?codigo_dane=68001"
+    nota: "El backend resuelve automáticamente el nombre al código DANE"
+  
+  parametros_fecha:
+    descripcion: "Puedes filtrar por rango de fechas usando fecha_inicio y fecha_fin"
+    formato: "YYYY-MM-DD"
+    ejemplo: "?fecha_inicio=2024-01-01&fecha_fin=2024-06-30"
+  
+  case_insensitive:
+    descripcion: "Los filtros de texto (categoria_delito, genero, etc.) son case-insensitive"
+    ejemplo: "?categoria_delito=hurto funciona igual que ?categoria_delito=HURTO"
+  
+  geojson_responses:
+    descripcion: "Los endpoints de mapas retornan GeoJSON estándar"
+    nota: "Compatibles directamente con Leaflet, Mapbox, OpenLayers"
+  
+  paginacion:
+    descripcion: "El endpoint mapa-puntos tiene parámetro limit para controlar cantidad"
+    default: 5000
+    nota: "Usar para evitar sobrecargar el mapa con demasiados puntos"
+
+  datos_clima:
+    alerta: "Los datos de clima son históricos (2005-2019)"
+    nota: "Para correlación efectiva, filtrar por años dentro de ese rango"
+
+# ============================================================================
+# SECCIÓN 6: CHATBOT - Consultas en Lenguaje Natural
+# ============================================================================
+chatbot:
+  prefix: "/chatbot"
+  descripcion: "Endpoints para consultas en lenguaje natural usando IA (Gemini)"
+  
+  endpoints:
+    - path: "/consultar"
+      method: "POST"
+      descripcion: "Endpoint principal para hacer preguntas en lenguaje natural sobre datos de seguridad"
+      uso_frontend: "Chat interactivo donde el usuario escribe preguntas"
+      request_body:
+        tipo: "JSON"
+        estructura:
+          pregunta:
+            tipo: "string"
+            requerido: true
+            descripcion: "Pregunta en lenguaje natural"
+            ejemplo: "¿Cuántos hurtos hubo en Bucaramanga en 2024?"
+          contexto:
+            tipo: "string"
+            requerido: false
+            descripcion: "Contexto adicional de la conversación"
+      response:
+        tipo: "JSON"
+        estructura:
+          respuesta: "Texto generado por IA con la respuesta"
+          datos_consultados: "Datos crudos de la consulta realizada"
+          tipo_consulta: "Tipo de consulta identificado (municipio, ranking, etc.)"
+      ejemplos_preguntas:
+        geografia:
+          - "¿Cuántos crímenes hay en Bucaramanga?"
+          - "¿Qué municipio tiene más hurtos?"
+          - "¿Cuál municipio tiene la tasa más alta de delitos por habitante?"
+          - "Compara los crímenes entre Bucaramanga y Floridablanca"
+        temporal:
+          - "¿Cómo han evolucionado los delitos por año?"
+          - "¿En qué mes ocurren más delitos?"
+          - "¿Qué día de la semana hay más crímenes?"
+          - "¿Cuántos hurtos hubo en 2023?"
+        victimas:
+          - "¿Qué género sufre más crímenes?"
+          - "¿Qué grupo de edad es más afectado?"
+          - "¿Dónde ocurren más delitos, en zona urbana o rural?"
+          - "¿Cuál es la probabilidad de sufrir violencia sexual siendo hombre?"
+        delitos:
+          - "¿Cuántos casos de violencia intrafamiliar hay?"
+          - "¿Qué arma se usa más en los crímenes?"
+          - "¿En qué lugares ocurren más delitos?"
+          - "¿Cuál es la modalidad más común de hurto?"
+        clima:
+          - "¿Cómo afecta la lluvia a los crímenes?"
+          - "¿Hay más delitos cuando llueve?"
+        combinadas:
+          - "¿Cuántos casos de violencia intrafamiliar hubo en Floridablanca en 2023?"
+          - "¿Probabilidad de sufrir violencia sexual en Barrancabermeja siendo hombre?"
+          - "¿Qué arma se usa más en los hurtos de Bucaramanga?"
+
+    - path: "/sugerencias"
+      method: "GET"
+      descripcion: "Obtiene sugerencias de preguntas que el usuario puede hacer"
+      uso_frontend: "Mostrar chips/botones con sugerencias de preguntas"
+      response:
+        tipo: "JSON"
+        estructura:
+          sugerencias:
+            - "¿Cuántos delitos hay en Bucaramanga?"
+            - "¿Qué municipio tiene más hurtos?"
+            - "¿Cómo han evolucionado los delitos por año?"
+            - "¿Qué género sufre más violencia intrafamiliar?"
+            - "¿En qué día de la semana hay más crímenes?"
+
+    - path: "/capacidades"
+      method: "GET"
+      descripcion: "Lista las capacidades del chatbot organizadas por categoría"
+      uso_frontend: "Mostrar ayuda/información sobre qué puede hacer el chatbot"
+      response:
+        tipo: "JSON"
+        estructura:
+          categorias:
+            geografia:
+              descripcion: "Consultas sobre municipios"
+              ejemplos: ["Datos de municipio específico", "Rankings", "Comparaciones"]
+            temporal:
+              descripcion: "Análisis temporal"
+              ejemplos: ["Tendencias anuales", "Por mes", "Por día de semana"]
+            victimas:
+              descripcion: "Análisis demográfico"
+              ejemplos: ["Por género", "Por grupo etario", "Por zona"]
+            delitos:
+              descripcion: "Tipos de delitos"
+              ejemplos: ["Por categoría", "Por modalidad", "Por arma", "Por lugar"]
+            clima:
+              descripcion: "Correlación climática"
+              ejemplos: ["Relación lluvia-delitos"]
+
+    - path: "/estadisticas"
+      method: "GET"
+      descripcion: "Obtiene estadísticas generales de los datos disponibles"
+      uso_frontend: "Mostrar resumen inicial o dashboard"
+      response:
+        tipo: "JSON"
+        estructura:
+          total_eventos: 213725
+          fecha_inicio: "2003-01-01"
+          fecha_fin: "2025-10-31"
+          municipios_cubiertos: 87
+          categorias_disponibles: ["HURTO", "VIF", "SEXUAL", "LESIONES", "INFANCIA"]
+
+  tipos_consulta:
+    descripcion: "Tipos de consulta que el chatbot puede interpretar automáticamente"
+    tipos:
+      - nombre: "estadisticas_generales"
+        descripcion: "Resumen general de todos los datos"
+        ejemplo: "Dame un resumen de los datos"
+      
+      - nombre: "municipio"
+        descripcion: "Datos de un municipio específico"
+        ejemplo: "¿Cuántos crímenes hay en Bucaramanga?"
+        parametros: ["municipio", "anio", "categoria"]
+      
+      - nombre: "ranking"
+        descripcion: "Top/Bottom municipios por cantidad de eventos"
+        ejemplo: "¿Qué municipios tienen más delitos?"
+        parametros: ["categoria", "anio", "limite", "orden"]
+      
+      - nombre: "ranking_tasa"
+        descripcion: "Top/Bottom municipios por tasa (por 100,000 habitantes)"
+        ejemplo: "¿Qué municipio tiene más hurtos por habitante?"
+        parametros: ["categoria", "anio", "limite", "orden"]
+      
+      - nombre: "comparar_municipios"
+        descripcion: "Comparar dos o más municipios"
+        ejemplo: "Compara Bucaramanga vs Floridablanca"
+        parametros: ["municipios", "anio", "categoria"]
+      
+      - nombre: "tendencia_anual"
+        descripcion: "Evolución por años"
+        ejemplo: "¿Cómo han evolucionado los delitos?"
+        parametros: ["municipio", "categoria"]
+      
+      - nombre: "datos_mes"
+        descripcion: "Distribución mensual de eventos"
+        ejemplo: "¿En qué mes hay más delitos?"
+        parametros: ["municipio", "anio", "categoria"]
+      
+      - nombre: "dia_semana"
+        descripcion: "Análisis por día de la semana"
+        ejemplo: "¿Qué día de la semana hay más crímenes?"
+        parametros: ["municipio", "anio", "categoria"]
+      
+      - nombre: "genero"
+        descripcion: "Distribución por género"
+        ejemplo: "¿Qué género sufre más delitos?"
+        parametros: ["municipio", "anio", "categoria"]
+      
+      - nombre: "grupo_etario"
+        descripcion: "Análisis por grupo de edad"
+        ejemplo: "¿Qué grupo de edad es más afectado?"
+        parametros: ["municipio", "anio", "categoria"]
+      
+      - nombre: "zona"
+        descripcion: "Comparativa urbano vs rural"
+        ejemplo: "¿Dónde hay más delitos, urbano o rural?"
+        parametros: ["municipio", "anio", "categoria"]
+      
+      - nombre: "categoria"
+        descripcion: "Datos de una categoría de delito específica"
+        ejemplo: "¿Cuántos hurtos hay en total?"
+        parametros: ["categoria", "municipio", "anio"]
+      
+      - nombre: "modalidad"
+        descripcion: "Análisis por modalidad específica"
+        ejemplo: "¿Cuál es la modalidad más común?"
+        parametros: ["modalidad", "categoria", "municipio", "anio"]
+      
+      - nombre: "arma_medio"
+        descripcion: "Análisis de un arma/medio específico"
+        ejemplo: "¿Cuántos delitos con arma de fuego?"
+        parametros: ["arma_medio", "categoria", "municipio", "anio"]
+      
+      - nombre: "ranking_armas"
+        descripcion: "Ranking de armas/medios más usados"
+        ejemplo: "¿Qué arma se usa más?"
+        parametros: ["categoria", "municipio", "anio", "limite"]
+      
+      - nombre: "ranking_sitios"
+        descripcion: "Ranking de lugares donde más ocurren delitos"
+        ejemplo: "¿En qué lugares ocurren más delitos?"
+        parametros: ["categoria", "municipio", "anio", "limite"]
+      
+      - nombre: "clase_sitio"
+        descripcion: "Análisis por tipo de lugar"
+        ejemplo: "¿Cuántos delitos en vía pública?"
+        parametros: ["clase_sitio", "categoria", "municipio", "anio"]
+      
+      - nombre: "correlacion_clima"
+        descripcion: "Relación clima-delitos"
+        ejemplo: "¿Cómo afecta la lluvia a los crímenes?"
+        parametros: ["municipio", "categoria"]
+        nota: "Solo disponible para años 2005-2019"
+
+  notas_uso:
+    consultas_combinadas:
+      descripcion: "El chatbot puede combinar múltiples filtros en una sola pregunta"
+      ejemplos:
+        - pregunta: "Violencia sexual contra hombres en Barrancabermeja"
+          interpretacion:
+            tipo_consulta: "genero"
+            parametros:
+              municipio: "Barrancabermeja"
+              categoria: "SEXUAL"
+              genero: "MASCULINO"
+        - pregunta: "Hurtos en Floridablanca en 2023"
+          interpretacion:
+            tipo_consulta: "municipio"
+            parametros:
+              municipio: "Floridablanca"
+              categoria: "HURTO"
+              anio: 2023
+    
+    valores_categoria:
+      descripcion: "Categorías de delito reconocidas"
+      valores:
+        - "HURTO"
+        - "VIF (Violencia Intrafamiliar)"
+        - "SEXUAL"
+        - "LESIONES"
+        - "INFANCIA"
+    
+    valores_genero:
+      descripcion: "Géneros reconocidos"
+      valores: ["MASCULINO", "FEMENINO"]
+    
+    valores_grupo_etario:
+      descripcion: "Grupos etarios disponibles"
+      valores: ["MENORES", "ADOLESCENTES", "JOVENES", "ADULTOS", "ADULTOS MAYORES"]
+    
+    valores_zona:
+      descripcion: "Zonas disponibles"
+      valores: ["URBANA", "RURAL"]
+    
+    municipios:
+      descripcion: "87 municipios de Santander disponibles"
+      principales: ["BUCARAMANGA", "FLORIDABLANCA", "GIRON", "PIEDECUESTA", "BARRANCABERMEJA", "SAN GIL"]
+
+# ============================================================================
+# SECCIÓN 7: PREDICCIONES - Machine Learning
+# ============================================================================
+predicciones:
+  prefix: "/predicciones"
+  descripcion: "Endpoints para consultar predicciones de delitos generadas por modelos de Machine Learning"
+  nota_importante: "Las predicciones son estimaciones basadas en datos históricos y modelos estadísticos. No deben considerarse como certezas."
+  
+  endpoints:
+    - path: "/municipio/{municipio}"
+      method: "GET"
+      descripcion: "Obtiene la serie temporal completa de delitos por mes para un municipio, combinando datos históricos con predicciones futuras"
+      uso_frontend: "Gráfico de línea temporal con zona de predicción diferenciada"
+      params:
+        - nombre: "municipio"
+          tipo: "string (path)"
+          requerido: true
+          descripcion: "Nombre del municipio"
+          ejemplo: "Bucaramanga"
+        - nombre: "categoria_delito"
+          tipo: "string"
+          requerido: false
+          descripcion: "Filtrar por categoría de delito"
+          valores_permitidos: ["HURTO", "VIF", "SEXUAL", "LESIONES", "INFANCIA"]
+        - nombre: "incluir_prediccion"
+          tipo: "boolean"
+          requerido: false
+          default: true
+          descripcion: "Si incluir datos de predicción al final de la serie"
+      response:
+        tipo: "JSON"
+        estructura:
+          municipio: "BUCARAMANGA"
+          codigo_dane: 68001
+          categoria_filtrada: null
+          total_registros_historicos: 263
+          total_predicciones: 1
+          datos:
+            - anio: 2003
+              mes: 1
+              total_delitos: 221
+              es_prediccion: false
+            - anio: 2025
+              mes: 11
+              total_delitos: 265.56
+              es_prediccion: true
+      ejemplo_uso:
+        descripcion: "Obtener serie temporal de hurtos en Floridablanca con predicción"
+        url: "/api/v1/predicciones/municipio/Floridablanca?categoria_delito=HURTO"
+
+    - path: "/resumen"
+      method: "GET"
+      descripcion: "Obtiene un resumen de todas las predicciones disponibles, ordenadas por cantidad predicha"
+      uso_frontend: "Tabla de predicciones o dashboard general"
+      params:
+        - nombre: "anio"
+          tipo: "integer"
+          requerido: false
+          descripcion: "Filtrar por año de predicción"
+          ejemplo: 2025
+        - nombre: "mes"
+          tipo: "integer"
+          requerido: false
+          descripcion: "Filtrar por mes de predicción (1-12)"
+          ejemplo: 11
+      response:
+        tipo: "JSON"
+        estructura:
+          total_predicciones: 24
+          filtros:
+            anio: 2025
+            mes: 11
+          predicciones:
+            - municipio: "BUCARAMANGA"
+              codigo_dane: 68001
+              anio: 2025
+              mes: 11
+              prediccion_delitos: 265.56
+      ejemplo_uso:
+        descripcion: "Ver todas las predicciones para noviembre 2025"
+        url: "/api/v1/predicciones/resumen?anio=2025&mes=11"
+
+    - path: "/comparativa/{municipio}"
+      method: "GET"
+      descripcion: "Compara las predicciones con el promedio histórico del municipio para evaluar tendencias"
+      uso_frontend: "Indicadores de tendencia, flechas arriba/abajo, porcentajes de cambio"
+      params:
+        - nombre: "municipio"
+          tipo: "string (path)"
+          requerido: true
+          descripcion: "Nombre del municipio"
+          ejemplo: "Bucaramanga"
+      response:
+        tipo: "JSON"
+        estructura:
+          municipio: "BUCARAMANGA"
+          codigo_dane: 68001
+          nota: "El promedio histórico se calcula con los últimos 3 años de datos"
+          comparativa:
+            - anio: 2025
+              mes: 11
+              prediccion: 265.56
+              promedio_historico_mes: 1000.5
+              diferencia: -734.94
+              porcentaje_cambio: -73.46
+              tendencia: "DISMINUCIÓN"
+      valores_tendencia: ["AUMENTO", "DISMINUCIÓN", "ESTABLE"]
+
+    - path: "/alertas"
+      method: "GET"
+      descripcion: "Identifica municipios con predicciones de aumento significativo de delitos respecto al promedio histórico"
+      uso_frontend: "Sistema de alertas, notificaciones, mapa de calor de riesgo"
+      params:
+        - nombre: "umbral_aumento"
+          tipo: "float"
+          requerido: false
+          default: 20.0
+          descripcion: "Porcentaje mínimo de aumento para generar alerta"
+          ejemplo: 10.0
+      response:
+        tipo: "JSON"
+        estructura:
+          umbral_configurado: 10.0
+          total_alertas: 9
+          alertas:
+            - municipio: "SUCRE"
+              codigo_dane: 68773
+              anio: 2025
+              mes: 5
+              prediccion: 3.31
+              promedio_historico: 1.0
+              porcentaje_aumento: 231.0
+              nivel_alerta: "CRÍTICO"
+      niveles_alerta:
+        CRÍTICO: "Aumento >= 50%"
+        ALTO: "Aumento >= 30%"
+        MODERADO: "Aumento >= umbral configurado"
+
+  notas_tecnicas:
+    modelo:
+      descripcion: "Las predicciones provienen de un modelo de series temporales entrenado con datos históricos"
+      archivo_fuente: "app/data/total_delitos_prediccion.csv"
+    
+    interpretacion_es_prediccion:
+      descripcion: "El campo 'es_prediccion' indica si el dato es histórico (false) o predicho (true)"
+      uso_frontend: "Usar para diferenciar visualmente (ej: línea sólida vs punteada, color diferente)"
+    
+    promedio_historico:
+      descripcion: "Se calcula con los últimos 3 años de datos para cada mes"
+      ejemplo: "El promedio de noviembre se calcula con noviembre 2022, 2023 y 2024"
+
+```

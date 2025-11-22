@@ -1,0 +1,112 @@
+# ==============================================================================
+# PROYECTO: ATLAS AL CRIMEN - SANTANDER
+# ARCHIVO: Configuración Maestra & Diccionario de Datos
+# VERSIÓN: 3.2 (Esquema Automatizado & Extendido)
+# AUTOR: Data Strategist Pro
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. CREDENCIALES DE CONEXIÓN (ENTORNO LOCAL)
+# ------------------------------------------------------------------------------
+database:
+  driver: "postgresql+psycopg2"
+  host: "10.10.2.152"
+  port: 5432
+  db_name: "santander"
+  user: "admin-santander"
+  password: "admin-gob"
+  ssl_mode: "prefer"
+
+# ------------------------------------------------------------------------------
+# 2. ARQUITECTURA DE DATOS (ESQUEMA EN ESTRELLA GEOESPACIAL)
+# ------------------------------------------------------------------------------
+schema_design:
+  description: "Modelo relacional optimizado para XGBoost con cálculo automático de vocación territorial."
+  srid: 4326  # WGS 84
+
+  # --- A. CAPA MAESTRA (ENTIDADES GEOGRÁFICAS) ---
+  tables:
+    master_municipios:
+      description: "Entidad central. Define el territorio administrativo."
+      columns:
+        codigo_dane: "INT (PK) - Código oficial (5 dígitos). Eje de los JOINs."
+        nombre_municipio: "VARCHAR - Nombre normalizado."
+        categoria_rural_urbana: "VARCHAR - Calculado automáticamente (ETL) comparando población Cabecera vs. Rural."
+        geom: "GEOMETRY(MULTIPOLYGON) - Límites territoriales."
+
+    # --- B. CAPA DE CONTEXTO (DIMENSIONES) ---
+    master_demografia:
+      description: "Estadísticas poblacionales para calcular tasas de riesgo."
+      columns:
+        codigo_dane: "FK -> master_municipios"
+        anio: "INT - Año de vigencia."
+        poblacion_total: "INT - Denominador base para Tasa x 100k hab."
+        poblacion_cabecera: "INT - Población urbana."
+        poblacion_rural: "INT - Población dispersa."
+
+    master_infraestructura_poi:
+      description: "Puntos estratégicos y entornos escolares detallados."
+      columns:
+        tipo_infraestructura: "VARCHAR - 'COLEGIO', 'BIBLIOTECA'."
+        nombre_sede: "VARCHAR - Nombre del establecimiento."
+        zona_geo: "VARCHAR - Ubicación reportada ('URBANA'/'RURAL')."
+        # --- DETALLE ESCOLAR (V3) ---
+        sector_escolar: "VARCHAR - 'OFICIAL' / 'PRIVADO' (Proxy socioeconómico)."
+        calendario_escolar: "VARCHAR - 'A' / 'B' (Define temporadas de vacaciones)."
+        jornada_escolar: "VARCHAR - 'MAÑANA' / 'TARDE' / 'NOCTURNA' (Correlación horaria)."
+        # ----------------------------
+        geom: "GEOMETRY(POINT) - Ubicación exacta."
+
+    master_conectividad:
+      description: "Infraestructura digital y calidad de servicio."
+      columns:
+        cobertura_4g_urbana: "INT (1/0)."
+        cobertura_4g_rural: "INT (1/0)."
+        brecha_digital_idx: "FLOAT - Índice de desconexión."
+        cantidad_operadores: "INT - Suma de operadores activos (Proxy de aislamiento)."
+
+    master_frentes_seguridad:
+      description: "Capital social y organización comunitaria."
+      columns:
+        nombre_frente: "VARCHAR - Barrio/Vereda."
+        nro_integrantes: "INT - Fuerza civil activa."
+        estado: "VARCHAR - 'ACTIVO' / 'INACTIVO'."
+
+    # --- C. CAPA TRANSACCIONAL (HECHOS / EVENTOS) ---
+    fact_seguridad:
+      description: "Registro histórico enriquecido de criminalidad (Target Variable)."
+      columns:
+        id_evento: "BIGSERIAL (PK)."
+        fecha_hecho: "DATE - Temporalidad."
+        codigo_dane: "FK -> master_municipios."
+        categoria_delito: "VARCHAR - Macro-tipo (Ej: 'HURTO', 'VIF')."
+        modalidad_especifica: "VARCHAR - (Ej: 'FLETEO', 'COSQUILLEO')."
+        zona_hecho: "VARCHAR - Entorno general."
+        # --- VARIABLES SOCIALES & SITUACIONALES (V3) ---
+        clase_sitio: "VARCHAR - Lugar específico ('VÍA PÚBLICA', 'LOCAL COMERCIAL'). Crítico."
+        genero: "VARCHAR - Sexo de la víctima."
+        grupo_etario: "VARCHAR - Ciclo vital ('MENOR', 'ADULTO')."
+        arma_medio: "VARCHAR - Mecanismo ('ARMA DE FUEGO', 'SIN EMPLEO DE ARMAS')."
+        # -----------------------------------------------
+        cantidad: "INT - Nro víctimas."
+        geom: "GEOMETRY(POINT) - Ubicación del incidente."
+
+    fact_clima:
+      description: "Variable ambiental exógena."
+      columns:
+        fecha: "DATE."
+        precipitacion_mm: "FLOAT - Lluvia diaria."
+
+    fact_incautaciones:
+      description: "Control de mercados ilegales."
+      columns:
+        tipo_droga: "VARCHAR."
+        cantidad_gramos: "FLOAT."
+
+# ------------------------------------------------------------------------------
+# 3. LÓGICA DE NEGOCIO (ETL)
+# ------------------------------------------------------------------------------
+etl_rules:
+  vocacion_municipal: "Se determina 'PREDOMINANTEMENTE RURAL' si la población rural > cabecera en el año actual (2024)."
+  normalizacion_geo: "Todas las coordenadas se transforman a WKT POINT/MULTIPOLYGON (SRID 4326)."
+  manejo_nulos: "Campos categóricos faltantes se rellenan con 'NO REPORTADO'."

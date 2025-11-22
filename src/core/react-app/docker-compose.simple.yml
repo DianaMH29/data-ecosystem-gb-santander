@@ -1,0 +1,16 @@
+# Docker Compose simple - Solo Frontend
+# Usa este archivo si el backend ya está corriendo en localhost:8000
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: atlas-crimen-frontend
+    ports:
+      - "3001:80"
+    environment:
+      - BACKEND_URL=http://host.docker.internal:8000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

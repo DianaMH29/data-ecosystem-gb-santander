@@ -1,0 +1,12 @@
+services:
+  backend-santander:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: atlas-crimen-backend
+    network_mode: host
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ../confiig_santander.yml:/app/confiig_santander.yml:ro
+    restart: unless-stopped
